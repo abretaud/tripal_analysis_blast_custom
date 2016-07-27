@@ -14,7 +14,6 @@ if(count($blast_results_list) > 0){
 
   foreach ($blast_results_list as $blast_result) {
     $hits_array    = $blast_result->hits_array;
-    var_dump($blast_result);
     $db            = $blast_result->db;
     $analysis      = $blast_result->analysis;
     $pager_id      = $feature_pager_id + $i;
