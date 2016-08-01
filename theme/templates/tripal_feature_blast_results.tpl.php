@@ -1,5 +1,10 @@
+<!-- bio.js lib to display hits -->
+<link rel="stylesheet" type="text/css" href="https://cdn.rawgit.com/calipho-sib/feature-viewer/v0.1.44/dist/feature-viewer.min.css">
+<script src="https://cdn.rawgit.com/calipho-sib/feature-viewer/v0.1.44/dist/feature-viewer.bundle.js"></script>
+
 <?php
-$feature  = $variables['node']->feature;
+$feature = $variables['node']->feature;
+$feature = chado_expand_var($feature,'field','feature.residues');
 $blast_results_list = $feature->tripal_analysis_blast->blast_results_list;
 
 // specify the number of records to show per database
@@ -32,8 +37,23 @@ if(count($blast_results_list) > 0){
         <strong>" . $result_name . "</strong>
         <br>Analysis Date: " .  preg_replace("/^(\d+-\d+-\d+) .*/","$1", $analysis->timeexecuted) . " (<a href=" . url("node/$analysis->nid").">$analysis->name</a>)
         <br>Total hits: " . number_format($total_records) . "
-    ";
+      <div id=\"features_vis-".$analysis->analysis_id."\"></div>
+      <script lang=\"javascript\">
+          var ft".$analysis->analysis_id." = new FeatureViewer('".$feature->residues."',
+          '#features_vis-".$analysis->analysis_id."',
+          {
+              showAxis: true,
+              showSequence: true,
+              brushActive: true, //zoom
+              toolbar:true, //current zoom & mouse position
+              bubbleHelp:true,
+              zoomMax:3 //define the maximum range of the zoom
+          });
+      </script>
+  ";
+  ?>
 
+    <?php
     // the $headers array is an array of fields to use as the colum headers.
     // additional documentation can be found here
     // https://api.drupal.org/api/drupal/includes%21theme.inc/function/theme_table/7
@@ -76,17 +96,30 @@ if(count($blast_results_list) > 0){
       // add a div box for each HSP details.  This box will be invisible by default
       // and made visible when the '[more]' link is clicked
       $hsps_array = $hit['hsp']; ?>
+
       <div class="tripal-analysis-blast-info-hsp-desc" id="hsp-desc-<?php print $analysis->analysis_id ?>-<?php print $j?>">
         <div class="hsp-desc-close"><a href="javascript:void(0)" onclick="this.hide()">[Close]</a></div>
         <strong>BLAST of <?php print $feature->name ?> vs. <?php print $db->name?></strong>
         <br>Match: <?php print $hit_name . " (" . $hit['description'] . ")<br>";
+        $hsp_pos = array();
         foreach ($hsps_array AS $hsp) { ?>
           <br><b>HSP <?php  print $hsp['hsp_num'] ?></b> Score: <?php print $hsp['bit_score'] ?> bits (<?php print $hsp['score'] ?>), Expect = <?php print $hsp['evalue'] ?><br>Identity = <?php print sprintf("%d/%d (%.2f%%)", $hsp['identity'], $hsp['align_len'], $hsp['identity']/$hsp['align_len']*100) ?>, Postives = <?php print sprintf("%d/%d (%.2f%%)", $hsp['positive'], $hsp['align_len'], $hsp['positive']/$hsp['align_len']*100)?>, Query Frame = <?php print $hsp['query_frame']?>
           <pre>Query: <?php print sprintf("%4d", $hsp['query_from'])?> <?php print $hsp['qseq'] ?> <?php print sprintf("%d", $hsp['query_to']); ?><br>            <?php print $hsp['midline'] ?><br>Sbjct: <?php print sprintf("%4d", $hsp['hit_from']) ?> <?php print $hsp['hseq']?> <?php print sprintf("%d",$hsp['hit_to']) ?>
           </pre><?php
-        } ?>
-      </div> <?php
-    }
+          $desc =
+          $hsp_pos[] = array('x' => $hsp['query_from'], 'y' => $hsp['query_to'], 'description' => 'Expect = '.$hsp['evalue'].'<br>Identity = '.sprintf("%d/%d (%.2f%%)", $hsp['identity'], $hsp['align_len'], $hsp['identity']/$hsp['align_len']*100));
+        }
+        $results_html .= "<script lang=\"javascript\">
+            ft".$analysis->analysis_id.".addFeature({
+               data: ".json_encode($hsp_pos).",
+               name: \"".$hit_name."\",
+               className: \"blast_match\", //can be used for styling
+               color: \"#0F8292\",
+               type: \"rect\" // ['rect', 'path', 'line']
+           });
+        </script>"; ?>
+      </div>
+    <?php }
 
     // if there are no results then print a nice message
     if ($total_records == 0) {
@@ -153,5 +186,9 @@ if(count($blast_results_list) > 0){
     'type' => 'ul',
     'attributes' => array(),
   ));
+  ?>
+
+ <?php
   print $results_html;
 }
+?>
