@@ -112,7 +112,7 @@ if(count($blast_results_list) > 0){
         $results_html .= "<script lang=\"javascript\">
             ft".$analysis->analysis_id.".addFeature({
                data: ".json_encode($hsp_pos).",
-               name: \"".$hit_name."\",
+               name: \"".$hit['hit_name']."\",
                className: \"blast_match\", //can be used for styling
                color: \"#0F8292\",
                type: \"rect\" // ['rect', 'path', 'line']
